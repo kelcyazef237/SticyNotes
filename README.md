@@ -68,3 +68,4 @@ src/
 
 MIT
 # StickNotes
+# SticyNotes
