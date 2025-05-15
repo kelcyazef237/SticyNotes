@@ -7,20 +7,12 @@ import {
   ActivityIndicator, 
   Platform, 
   Alert, 
-  ScrollView, 
-  SafeAreaView 
+  ScrollView 
 } from 'react-native';
-import AudioRecorderPlayer, {
-  AVEncoderAudioQualityIOSType,
-  AVEncodingOption,
-  AudioEncoderAndroidType,
-  AudioSet,
-  AudioSourceAndroidType,
-} from 'react-native-audio-recorder-player';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { theme } from '../utils/theme';
 import { requestAudioPermissions } from '../utils/permissions';
-import Slider from '@react-native-community/slider';
 import RNFS from 'react-native-fs';
 
 interface Props {
@@ -161,17 +153,8 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
       
       setCurrentRecordingPath(path);
       
-      // Configure audio settings
-      const audioSet: AudioSet = {
-        AudioEncoderAndroid: AudioEncoderAndroidType.AAC,
-        AudioSourceAndroid: AudioSourceAndroidType.MIC,
-        AVEncoderAudioQualityKeyIOS: AVEncoderAudioQualityIOSType.medium,
-        AVNumberOfChannelsKeyIOS: 2,
-        AVFormatIDKeyIOS: AVEncodingOption.aac,
-      };
-      
       // Start recording
-      await audioRecorderPlayerRef.current.startRecorder(path, audioSet);
+      await audioRecorderPlayerRef.current.startRecorder(path);
       
       // Set up recording subscription
       audioRecorderPlayerRef.current.addRecordBackListener((e) => {
@@ -284,14 +267,6 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
     }
   };
 
-  const seekTo = async (seconds: number) => {
-    try {
-      await audioRecorderPlayerRef.current.seekToPlayer(seconds);
-    } catch (error) {
-      console.error('Error seeking:', error);
-    }
-  };
-
   const deleteRecording = async (recording: Recording) => {
     try {
       // Stop playback if this recording is playing
@@ -315,28 +290,23 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
     
     return (
       <View style={styles.recordingItem} key={recording.id}>
-        <View style={styles.recordingMain}>
-          <View style={styles.recordingIconContainer}>
+        <View style={styles.recordingLeftSection}>
+          <View style={styles.recordingIconCircle}>
             <Icon 
               name="mic" 
-              size={24} 
-              color={theme.colors.primary} 
+              size={20} 
+              color="#fff" 
             />
           </View>
           
-          <View style={styles.recordingDetails}>
-            <Text style={styles.recordingDate}>
-              {formatDate(recording.timestamp)}
-            </Text>
-            {isCurrentlyPlaying && (
-              <Text style={styles.playingLabel}>
-                {isPaused ? 'Paused' : 'Playing'} {playTime} / {duration}
-              </Text>
-            )}
-          </View>
-          
+          <Text style={styles.recordingDate}>
+            {formatDate(recording.timestamp)}
+          </Text>
+        </View>
+        
+        <View style={styles.recordingControls}>
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={styles.controlButton}
             onPress={() => {
               Alert.alert(
                 'Delete Recording',
@@ -352,11 +322,11 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
               );
             }}
           >
-            <Icon name="delete" size={24} color={theme.colors.error} />
+            <Icon name="delete" size={22} color={theme.colors.error} />
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={styles.playButton}
+            style={[styles.controlButton, styles.playButtonCircle]}
             onPress={() => {
               if (isCurrentlyPlaying) {
                 if (isPaused) {
@@ -371,28 +341,17 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
           >
             <Icon 
               name={isCurrentlyPlaying ? (isPaused ? 'play-arrow' : 'pause') : 'play-arrow'} 
-              size={24} 
-              color={theme.colors.primary} 
+              size={22} 
+              color="#fff" 
             />
           </TouchableOpacity>
         </View>
         
         {isCurrentlyPlaying && (
           <View style={styles.playbackControls}>
-            <Slider
-              style={styles.slider}
-              minimumValue={0}
-              maximumValue={currentDurationSec > 0 ? currentDurationSec : 1}
-              value={currentPositionSec}
-              minimumTrackTintColor={theme.colors.primary}
-              maximumTrackTintColor="#ddd"
-              thumbTintColor={theme.colors.primary}
-              onSlidingComplete={seekTo}
-            />
-            <View style={styles.timeContainer}>
-              <Text style={styles.timeText}>{playTime}</Text>
-              <Text style={styles.timeText}>{duration}</Text>
-            </View>
+            <Text style={styles.playingLabel}>
+              {isPaused ? 'Paused' : 'Playing'} {playTime} / {duration}
+            </Text>
           </View>
         )}
       </View>
@@ -400,11 +359,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Voice Recorder</Text>
-      </View>
-      
+    <View style={styles.container}>
       {isRecording && (
         <View style={styles.recordingStatus}>
           <View style={styles.recordingIndicator}>
@@ -422,7 +377,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
           </View>
         ) : (
           <View style={styles.emptyContainer}>
-            <Icon name="mic-none" size={64} color={theme.colors.gray} />
+            <Icon name="mic-none" size={48} color={theme.colors.gray} />
             <Text style={styles.emptyMessage}>No Recordings Yet</Text>
             <Text style={styles.emptySubMessage}>
               Tap the microphone button below to start recording
@@ -441,48 +396,37 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
             <Text style={styles.permissionText}>Grant Microphone Permission</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[
-              styles.recordButton,
-              isRecording && styles.recordingButton
-            ]}
-            onPress={isRecording ? stopRecording : startRecording}
-            disabled={isCheckingPermission}
-          >
-            {isCheckingPermission ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Icon
-                name={isRecording ? 'stop' : 'mic'}
-                size={32}
-                color="#fff"
-              />
-            )}
-          </TouchableOpacity>
+          <View style={styles.microphoneContainer}>
+            <TouchableOpacity
+              style={[
+                styles.recordButton,
+                isRecording && styles.recordingButton
+              ]}
+              onPress={isRecording ? stopRecording : startRecording}
+              disabled={isCheckingPermission}
+            >
+              {isCheckingPermission ? (
+                <ActivityIndicator color="#999" size="small" />
+              ) : (
+                <Icon
+                  name={isRecording ? 'stop' : 'mic'}
+                  size={32}
+                  color="#fff"
+                />
+              )}
+            </TouchableOpacity>
+          </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.secondary,
-    padding: 0,
-  },
-  header: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#FFF8DC', // Cream color to match the app's theme
     padding: 16,
-    paddingTop: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.colors.white,
-    textAlign: 'center',
   },
   recordingStatus: {
     backgroundColor: theme.colors.error,
@@ -490,6 +434,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderRadius: 8,
+    marginBottom: 16,
   },
   recordingIndicator: {
     flexDirection: 'row',
@@ -516,7 +462,6 @@ const styles = StyleSheet.create({
   },
   recordingsContainer: {
     flex: 1,
-    padding: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -549,28 +494,34 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   recordingItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    borderRadius: 12,
+    marginBottom: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
-    elevation: 2,
-    shadowColor: 'rgba(0,0,0,0.1)',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  recordingMain: {
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  recordingIconContainer: {
+  recordingLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recordingIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
-  },
-  recordingDetails: {
-    flex: 1,
   },
   recordingDate: {
     fontSize: 16,
@@ -581,38 +532,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.primary,
     marginTop: 4,
+    fontWeight: '500',
   },
-  deleteButton: {
-    padding: 8,
-    marginRight: 8,
+  recordingControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  playButton: {
+  controlButton: {
     padding: 8,
+    marginLeft: 8,
+  },
+  playButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 0,
   },
   playbackControls: {
     padding: 12,
     paddingTop: 0,
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-  },
-  timeText: {
-    fontSize: 12,
-    color: theme.colors.gray,
+    backgroundColor: 'transparent',
   },
   controlsContainer: {
     padding: 20,
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   recordButton: {
     backgroundColor: theme.colors.primary,
@@ -621,10 +568,10 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 3,
   },
   recordingButton: {
@@ -637,10 +584,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginVertical: 20,
   },
   permissionText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  microphoneContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginVertical: 20,
   },
 });
 
