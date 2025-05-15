@@ -126,7 +126,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
     try {
       const updatedNote = {
         ...note,
-        updatedAt: new Date().toISOString(),
+        updatedAt: Date.now(),
       };
       
       await saveNote(updatedNote);
