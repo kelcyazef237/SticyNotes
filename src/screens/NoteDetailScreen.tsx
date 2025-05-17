@@ -21,6 +21,8 @@ import RNFS from 'react-native-fs';
 import SignatureCanvas from 'react-native-signature-canvas';
 import { theme } from '../utils/theme';
 import { Note, saveNote, getNote, deleteNote } from '../utils/noteUtils';
+import { shareNote, shareVoiceNote, shareDrawingNote } from '../utils/shareUtils';
+import { addNoteToWidget, removeNoteFromWidget, isNoteInWidget } from '../utils/widgetUtils';
 
 type RootStackParamList = {
   Splash: undefined;
@@ -88,6 +90,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [audioPath, setAudioPath] = useState<string | undefined>(undefined);
+  const [isInWidget, setIsInWidget] = useState(false);
   const sketchRef = useRef<any>(null);
 
   useEffect(() => {
@@ -102,6 +105,10 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
             if (loadedNote.audioPath) {
               setAudioPath(loadedNote.audioPath);
             }
+            
+            // Check if note is in widget
+            const noteInWidget = await isNoteInWidget(noteId);
+            setIsInWidget(noteInWidget);
           }
         } catch (error) {
           console.error('Failed to load note:', error);
@@ -164,6 +171,47 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
         }
       ]
     );
+  };
+
+  const handleShare = async () => {
+    try {
+      if (inputMode === 'voice' && note.audioPath) {
+        await shareVoiceNote(note);
+      } else if (inputMode === 'drawing' && note.drawingPaths) {
+        await shareDrawingNote(note);
+      } else {
+        await shareNote(note);
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      Alert.alert('Share Error', 'Failed to share note. Please try again.');
+    }
+  };
+
+  const handleWidgetToggle = async () => {
+    if (!note.id) {
+      Alert.alert('Save Required', 'Please save the note first before adding it to widget');
+      return;
+    }
+    
+    try {
+      if (isInWidget) {
+        const removed = await removeNoteFromWidget(note.id);
+        if (removed) {
+          setIsInWidget(false);
+          Alert.alert('Success', 'Note removed from widget');
+        }
+      } else {
+        const added = await addNoteToWidget(note.id);
+        if (added) {
+          setIsInWidget(true);
+          Alert.alert('Success', 'Note added to widget');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling widget:', error);
+      Alert.alert('Error', 'Failed to update widget');
+    }
   };
 
   const renderInputMode = () => {
@@ -356,7 +404,13 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
           maxLength={100}
           accessibilityLabel="Note title"
         />
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isSaving} accessibilityLabel="Save note">
+        <TouchableOpacity style={styles.headerButton} onPress={handleWidgetToggle} accessibilityLabel="Toggle widget">
+          <Icon name={isInWidget ? "widgets" : "add-to-home-screen"} size={24} color={theme.colors.white} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerButton} onPress={handleShare} accessibilityLabel="Share note">
+          <Icon name="share" size={24} color={theme.colors.white} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerButton} onPress={handleSave} disabled={isSaving} accessibilityLabel="Save note">
           {isSaving ? (
             <ActivityIndicator size="small" color={theme.colors.white} />
           ) : (
@@ -455,9 +509,6 @@ const styles = StyleSheet.create<any>({
     shadowOpacity: 0.18,
     shadowRadius: 12,
   },
-  // Removed earlier definitions for header, backButton, titleInput, saveButton. Will keep only the last definitions below.
-
-  // Final, non-duplicated style definitions below:
   modeSelector: {
     flexDirection: 'row',
     backgroundColor: theme.colors.secondary,
@@ -549,15 +600,15 @@ const styles = StyleSheet.create<any>({
     padding: theme.spacing.sm,
     marginRight: theme.spacing.sm,
   },
+  headerButton: {
+    padding: theme.spacing.sm,
+    marginLeft: theme.spacing.sm,
+  },
   titleInput: {
     flex: 1,
     fontSize: theme.fontSize.lg,
     color: theme.colors.white,
     fontWeight: theme.fontWeight.medium,
-  },
-  saveButton: {
-    padding: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
   },
   drawingScrollContainer: {
     flex: 1,

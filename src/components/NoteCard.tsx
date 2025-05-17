@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Note } from '../utils/noteUtils';
 import { theme } from '../utils/theme';
+import { shareNote, shareVoiceNote, shareDrawingNote } from '../utils/shareUtils';
 
 interface NoteCardProps {
   note: Note;
@@ -27,6 +29,22 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
   // Format date
   const formattedDate = new Date(note.updatedAt).toLocaleDateString();
   
+  const handleShare = async (e: any) => {
+    e.stopPropagation(); // Prevent triggering the card's onPress
+    
+    try {
+      if (note.audioPath) {
+        await shareVoiceNote(note);
+      } else if (note.drawingPaths) {
+        await shareDrawingNote(note);
+      } else {
+        await shareNote(note);
+      }
+    } catch (error) {
+      console.error('Error sharing note:', error);
+    }
+  };
+  
   return (
     <TouchableOpacity 
       style={[styles.card, { backgroundColor: getRandomColor() }]}
@@ -39,10 +57,24 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
       <Text style={styles.content} numberOfLines={3}>
         {contentPreview}
       </Text>
-      <Text style={styles.date}>{formattedDate}</Text>
+      <View style={styles.footer}>
+        <Text style={styles.date}>{formattedDate}</Text>
+        <TouchableOpacity 
+          style={styles.shareButton} 
+          onPress={handleShare}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon name="share" size={18} color={theme.colors.brown} />
+        </TouchableOpacity>
+      </View>
       {note.drawingPaths && (
         <View style={styles.drawingIndicator}>
           <Text style={styles.drawingIndicatorText}>✏️</Text>
+        </View>
+      )}
+      {note.audioPath && (
+        <View style={styles.audioIndicator}>
+          <Text style={styles.audioIndicatorText}>🎤</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -72,11 +104,20 @@ const styles = StyleSheet.create({
     color: theme.colors.black,
     opacity: 0.7,
   },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+  },
   date: {
     fontSize: theme.fontSize.xs,
     color: theme.colors.gray,
-    marginTop: theme.spacing.sm,
-    alignSelf: 'flex-end',
+  },
+  shareButton: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
   },
   drawingIndicator: {
     position: 'absolute',
@@ -84,6 +125,14 @@ const styles = StyleSheet.create({
     right: theme.spacing.xs,
   },
   drawingIndicatorText: {
+    fontSize: theme.fontSize.md,
+  },
+  audioIndicator: {
+    position: 'absolute',
+    top: theme.spacing.xs,
+    right: theme.spacing.xs * 4,
+  },
+  audioIndicatorText: {
     fontSize: theme.fontSize.md,
   }
 });
