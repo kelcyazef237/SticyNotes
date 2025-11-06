@@ -34,9 +34,9 @@ export const saveNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'
   try {
     const timestamp = Date.now();
     const notes = await getAllNotes();
-    
+
     let savedNote: Note;
-    
+
     if (note.id) {
       // Update existing note
       const existingNoteIndex = notes.findIndex(n => n.id === note.id);
@@ -44,7 +44,7 @@ export const saveNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'
         savedNote = {
           ...notes[existingNoteIndex],
           ...note,
-          updatedAt: timestamp
+          updatedAt: timestamp,
         };
         notes[existingNoteIndex] = savedNote;
       } else {
@@ -60,7 +60,7 @@ export const saveNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'
       };
       notes.push(savedNote);
     }
-    
+
     await AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
     return savedNote;
   } catch (error) {
@@ -93,11 +93,11 @@ export const deleteNote = async (id: string): Promise<boolean> => {
   try {
     const notes = await getAllNotes();
     const newNotes = notes.filter(note => note.id !== id);
-    
+
     if (notes.length === newNotes.length) {
       return false; // Note not found
     }
-    
+
     await AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(newNotes));
     return true;
   } catch (error) {

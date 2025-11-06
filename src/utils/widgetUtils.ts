@@ -27,19 +27,19 @@ export const getWidgetNotes = async (): Promise<string[]> => {
 export const addNoteToWidget = async (noteId: string): Promise<boolean> => {
   try {
     const widgetNotes = await getWidgetNotes();
-    
+
     // Check if note already exists in widget
     if (widgetNotes.includes(noteId)) {
       return true;
     }
-    
+
     // Add note to widget
     widgetNotes.push(noteId);
     await AsyncStorage.setItem(WIDGET_NOTES_KEY, JSON.stringify(widgetNotes));
-    
+
     // Update the widget if possible
     await updateWidget();
-    
+
     return true;
   } catch (error) {
     console.error('Error adding note to widget:', error);
@@ -54,19 +54,19 @@ export const addNoteToWidget = async (noteId: string): Promise<boolean> => {
 export const removeNoteFromWidget = async (noteId: string): Promise<boolean> => {
   try {
     const widgetNotes = await getWidgetNotes();
-    
+
     // Filter out the note
     const newWidgetNotes = widgetNotes.filter(id => id !== noteId);
-    
+
     if (newWidgetNotes.length === widgetNotes.length) {
       return false; // Note not found
     }
-    
+
     await AsyncStorage.setItem(WIDGET_NOTES_KEY, JSON.stringify(newWidgetNotes));
-    
+
     // Update the widget if possible
     await updateWidget();
-    
+
     return true;
   } catch (error) {
     console.error('Error removing note from widget:', error);
@@ -95,20 +95,20 @@ export const getNotesForWidget = async (): Promise<Note[]> => {
   try {
     const widgetNoteIds = await getWidgetNotes();
     const allNotes = await getAllNotes();
-    
+
     let notesToDisplay: Note[] = [];
-    
+
     // First add manually selected notes
     if (widgetNoteIds.length > 0) {
       notesToDisplay = allNotes.filter(note => widgetNoteIds.includes(note.id));
     }
-    
+
     // If we have less than 3 notes or no manually selected notes,
     // add the most recently modified notes until we have 3
     if (notesToDisplay.length < 3) {
       // Sort all notes by updatedAt (most recent first)
       const recentNotes = [...allNotes].sort((a, b) => b.updatedAt - a.updatedAt);
-      
+
       // Add recent notes that aren't already in the widget
       for (const note of recentNotes) {
         if (!notesToDisplay.some(n => n.id === note.id)) {
@@ -119,7 +119,7 @@ export const getNotesForWidget = async (): Promise<Note[]> => {
         }
       }
     }
-    
+
     // Sort by most recent first
     return notesToDisplay.sort((a, b) => b.updatedAt - a.updatedAt);
   } catch (error) {

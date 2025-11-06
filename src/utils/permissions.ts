@@ -4,7 +4,7 @@ export async function requestAudioPermissions(): Promise<boolean> {
   if (Platform.OS === 'android') {
     try {
       console.log('Requesting audio permission only...');
-      
+
       // Only request microphone permission - we'll use app-specific storage
       const audioPermission = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
@@ -16,9 +16,9 @@ export async function requestAudioPermissions(): Promise<boolean> {
           buttonPositive: 'OK',
         }
       );
-      
+
       console.log('Audio permission result:', audioPermission);
-      
+
       if (audioPermission !== PermissionsAndroid.RESULTS.GRANTED) {
         console.warn('Microphone permission denied');
         Alert.alert(
@@ -28,7 +28,7 @@ export async function requestAudioPermissions(): Promise<boolean> {
         );
         return false;
       }
-      
+
       // We'll use app-specific storage which doesn't require permissions
       console.log('Using app-specific storage for recordings');
       return true;
@@ -37,7 +37,7 @@ export async function requestAudioPermissions(): Promise<boolean> {
       return false;
     }
   }
-  
+
   // iOS doesn't need explicit permissions for app-specific storage
   return true;
 }
