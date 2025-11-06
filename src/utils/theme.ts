@@ -18,13 +18,13 @@ export const theme = {
     md: 16,
     lg: 24,
     xl: 32,
-    xxl: 48
+    xxl: 48,
   },
   borderRadius: {
     sm: 4,
     md: 8,
     lg: 16,
-    xl: 24
+    xl: 24,
   },
   fontSize: {
     xs: 12,
@@ -32,11 +32,11 @@ export const theme = {
     md: 16,
     lg: 20,
     xl: 24,
-    xxl: 32
+    xxl: 32,
   },
   fontWeight: {
     regular: '400' as const,
     medium: '500' as const,
-    bold: '700' as const
-  }
+    bold: '700' as const,
+  },
 };

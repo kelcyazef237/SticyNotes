@@ -22,16 +22,16 @@ const getRandomColor = () => {
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
   // Truncate content to show only a preview
-  const contentPreview = note.content.length > 80 
-    ? `${note.content.substring(0, 80)}...` 
+  const contentPreview = note.content.length > 80
+    ? `${note.content.substring(0, 80)}...`
     : note.content;
-  
+
   // Format date
   const formattedDate = new Date(note.updatedAt).toLocaleDateString();
-  
+
   const handleShare = async (e: any) => {
     e.stopPropagation(); // Prevent triggering the card's onPress
-    
+
     try {
       if (note.audioPath) {
         await shareVoiceNote(note);
@@ -44,9 +44,9 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
       console.error('Error sharing note:', error);
     }
   };
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.card, { backgroundColor: getRandomColor() }]}
       onPress={() => onPress(note)}
       activeOpacity={0.8}
@@ -59,8 +59,8 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onPress }) => {
       </Text>
       <View style={styles.footer}>
         <Text style={styles.date}>{formattedDate}</Text>
-        <TouchableOpacity 
-          style={styles.shareButton} 
+        <TouchableOpacity
+          style={styles.shareButton}
           onPress={handleShare}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   audioIndicatorText: {
     fontSize: theme.fontSize.md,
-  }
+  },
 });
 
 export default NoteCard;

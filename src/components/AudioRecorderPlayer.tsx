@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  TouchableOpacity, 
-  Text, 
-  StyleSheet, 
-  ActivityIndicator, 
-  Platform, 
-  Alert, 
-  ScrollView 
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+  Alert,
+  ScrollView,
 } from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -41,8 +41,8 @@ function formatDate(timestamp: number) {
 const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState('00:00');
-  const [currentPositionSec, setCurrentPositionSec] = useState(0);
-  const [currentDurationSec, setCurrentDurationSec] = useState(0);
+  const [_currentPositionSec, setCurrentPositionSec] = useState(0);
+  const [_currentDurationSec, setCurrentDurationSec] = useState(0);
   const [playTime, setPlayTime] = useState('00:00');
   const [duration, setDuration] = useState('00:00');
   const [hasPermission, setHasPermission] = useState(false);
@@ -52,48 +52,57 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  
+
   const audioRecorderPlayerRef = useRef(new AudioRecorderPlayer());
-  
+
   useEffect(() => {
     // Initialize and load saved recordings
     loadRecordings();
-    
+
     // Clean up on unmount
+    const player = audioRecorderPlayerRef.current;
     return () => {
-      if (isRecording) {
-        stopRecording();
-      }
-      if (isPlaying) {
-        stopPlaying();
-      }
+      const cleanup = async () => {
+        if (isRecording) {
+          await player.stopRecorder();
+          player.removeRecordBackListener();
+        }
+        if (isPlaying) {
+          await player.stopPlayer();
+          player.removePlayBackListener();
+        }
+      };
+      cleanup();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   useEffect(() => {
     if (audioPath) {
       // If audioPath is provided as a prop, add it to recordings if not already there
-      const recording = {
-        id: `imported-${Date.now()}`,
-        path: audioPath,
-        timestamp: Date.now(),
-      };
-      
-      // Check if this recording already exists
-      const exists = recordings.some(r => r.path === audioPath);
-      if (!exists) {
-        setRecordings(prev => [...prev, recording]);
-      }
+      setRecordings(prev => {
+        // Check if this recording already exists
+        const exists = prev.some(r => r.path === audioPath);
+        if (!exists) {
+          const recording = {
+            id: `imported-${Date.now()}`,
+            path: audioPath,
+            timestamp: Date.now(),
+          };
+          return [...prev, recording];
+        }
+        return prev;
+      });
     }
   }, [audioPath]);
 
   const checkPermission = async () => {
     setIsCheckingPermission(true);
     try {
-      const hasPermission = await requestAudioPermissions();
-      setHasPermission(hasPermission);
+      const granted = await requestAudioPermissions();
+      setHasPermission(granted);
       setIsCheckingPermission(false);
-      return hasPermission;
+      return granted;
     } catch (error) {
       console.error('Error checking permissions:', error);
       setIsCheckingPermission(false);
@@ -106,27 +115,27 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
     try {
       // Get all files in the app's document directory
       const files = await RNFS.readDir(RNFS.DocumentDirectoryPath);
-      
+
       // Filter for audio files (m4a)
-      const audioFiles = files.filter(file => 
+      const audioFiles = files.filter(file =>
         file.name.endsWith('.m4a') && file.name.startsWith('sticky_note_')
       );
-      
+
       // Create Recording objects
       const loadedRecordings = audioFiles.map(file => {
         // Extract timestamp from filename (sticky_note_TIMESTAMP.m4a)
         const timestamp = parseInt(file.name.replace('sticky_note_', '').replace('.m4a', ''), 10);
-        
+
         return {
           id: file.name,
           path: file.path,
           timestamp: isNaN(timestamp) ? Date.now() : timestamp,
         };
       });
-      
+
       // Sort by timestamp (newest first)
       loadedRecordings.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       setRecordings(loadedRecordings);
     } catch (error) {
       console.error('Error loading recordings:', error);
@@ -135,12 +144,12 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
   };
 
   const startRecording = async () => {
-    const hasPermission = await checkPermission();
-    if (!hasPermission) {
+    const granted = await checkPermission();
+    if (!granted) {
       Alert.alert(
         'Permission Required',
         'Microphone permission is required to record audio.',
-        [{ text: 'OK' }]
+        [{text: 'OK'}],
       );
       return;
     }
@@ -150,18 +159,18 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
       const path = Platform.OS === 'android' || Platform.OS === 'ios'
         ? `${RNFS.DocumentDirectoryPath}/sticky_note_${Date.now()}.m4a`
         : `sticky_note_${Date.now()}.m4a`;
-      
+
       setCurrentRecordingPath(path);
-      
+
       // Start recording
       await audioRecorderPlayerRef.current.startRecorder(path);
-      
+
       // Set up recording subscription
       audioRecorderPlayerRef.current.addRecordBackListener((e) => {
         setRecordingTime(formatTime(e.currentPosition));
         return;
       });
-      
+
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -170,28 +179,30 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
   };
 
   const stopRecording = async () => {
-    if (!isRecording) return;
-    
+    if (!isRecording) {
+      return;
+    }
+
     try {
-      const result = await audioRecorderPlayerRef.current.stopRecorder();
+      await audioRecorderPlayerRef.current.stopRecorder();
       audioRecorderPlayerRef.current.removeRecordBackListener();
-      
+
       setIsRecording(false);
       setRecordingTime('00:00');
-      
+
       if (currentRecordingPath) {
         const newRecording = {
           id: `recording-${Date.now()}`,
           path: currentRecordingPath,
           timestamp: Date.now(),
         };
-        
+
         setRecordings(prev => [newRecording, ...prev]);
-        
+
         // Call the callback with the recording path
         onRecorded(currentRecordingPath);
       }
-      
+
       setCurrentRecordingPath(null);
     } catch (error) {
       console.error('Error stopping recording:', error);
@@ -205,10 +216,10 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
       if (isPlaying) {
         await stopPlaying();
       }
-      
+
       // Start playing the selected recording
       await audioRecorderPlayerRef.current.startPlayer(recording.path);
-      
+
       // Set up playback subscription
       audioRecorderPlayerRef.current.addPlayBackListener((e) => {
         if (e.currentPosition >= e.duration) {
@@ -216,13 +227,13 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
           stopPlaying();
           return;
         }
-        
+
         setCurrentPositionSec(e.currentPosition);
         setCurrentDurationSec(e.duration);
         setPlayTime(formatTime(e.currentPosition));
         setDuration(formatTime(e.duration));
       });
-      
+
       setPlayingId(recording.id);
       setIsPlaying(true);
       setIsPaused(false);
@@ -254,7 +265,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
     try {
       await audioRecorderPlayerRef.current.stopPlayer();
       audioRecorderPlayerRef.current.removePlayBackListener();
-      
+
       setPlayingId(null);
       setIsPlaying(false);
       setIsPaused(false);
@@ -273,10 +284,10 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
       if (playingId === recording.id) {
         await stopPlaying();
       }
-      
+
       // Delete the file
       await RNFS.unlink(recording.path);
-      
+
       // Remove from state
       setRecordings(prev => prev.filter(r => r.id !== recording.id));
     } catch (error) {
@@ -287,23 +298,23 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
 
   const renderRecordingItem = (recording: Recording) => {
     const isCurrentlyPlaying = playingId === recording.id;
-    
+
     return (
       <View style={styles.recordingItem} key={recording.id}>
         <View style={styles.recordingLeftSection}>
           <View style={styles.recordingIconCircle}>
-            <Icon 
-              name="mic" 
-              size={20} 
-              color="#fff" 
+            <Icon
+              name="mic"
+              size={20}
+              color="#fff"
             />
           </View>
-          
+
           <Text style={styles.recordingDate}>
             {formatDate(recording.timestamp)}
           </Text>
         </View>
-        
+
         <View style={styles.recordingControls}>
           <TouchableOpacity
             style={styles.controlButton}
@@ -313,18 +324,18 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
                 'Are you sure you want to delete this recording?',
                 [
                   { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Delete', 
+                  {
+                    text: 'Delete',
                     style: 'destructive',
-                    onPress: () => deleteRecording(recording)
-                  }
+                    onPress: () => deleteRecording(recording),
+                  },
                 ]
               );
             }}
           >
             <Icon name="delete" size={22} color={theme.colors.error} />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.controlButton, styles.playButtonCircle]}
             onPress={() => {
@@ -339,14 +350,14 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
               }
             }}
           >
-            <Icon 
-              name={isCurrentlyPlaying ? (isPaused ? 'play-arrow' : 'pause') : 'play-arrow'} 
-              size={22} 
-              color="#fff" 
+            <Icon
+              name={isCurrentlyPlaying ? (isPaused ? 'play-arrow' : 'pause') : 'play-arrow'}
+              size={22}
+              color="#fff"
             />
           </TouchableOpacity>
         </View>
-        
+
         {isCurrentlyPlaying && (
           <View style={styles.playbackControls}>
             <Text style={styles.playingLabel}>
@@ -369,7 +380,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
           <Text style={styles.recordingTimer}>{recordingTime}</Text>
         </View>
       )}
-      
+
       <ScrollView style={styles.recordingsContainer}>
         {recordings.length > 0 ? (
           <View style={styles.recordingsList}>
@@ -385,7 +396,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
           </View>
         )}
       </ScrollView>
-      
+
       <View style={styles.controlsContainer}>
         {!hasPermission && !isCheckingPermission ? (
           <TouchableOpacity
@@ -400,7 +411,7 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
             <TouchableOpacity
               style={[
                 styles.recordButton,
-                isRecording && styles.recordingButton
+                isRecording && styles.recordingButton,
               ]}
               onPress={isRecording ? stopRecording : startRecording}
               disabled={isCheckingPermission}

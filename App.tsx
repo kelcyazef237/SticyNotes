@@ -32,9 +32,9 @@ function App(): React.ReactElement {
 
   return (
     <NavigationContainer>
-      <StatusBar 
+      <StatusBar
         backgroundColor={theme.colors.primary}
-        barStyle="light-content" 
+        barStyle="light-content"
       />
       <Stack.Navigator
         initialRouteName="Splash"

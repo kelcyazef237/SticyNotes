@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
   TextInput,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Alert,
@@ -12,17 +11,19 @@ import {
   KeyboardAvoidingView,
   ScrollView,
 } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {RouteProp} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AudioRecorderPlayerComponent from '../components/AudioRecorderPlayer';
-import { requestAudioPermissions } from '../utils/permissions';
-import RNFS from 'react-native-fs';
 import SignatureCanvas from 'react-native-signature-canvas';
-import { theme } from '../utils/theme';
-import { Note, saveNote, getNote, deleteNote } from '../utils/noteUtils';
-import { shareNote, shareVoiceNote, shareDrawingNote } from '../utils/shareUtils';
-import { addNoteToWidget, removeNoteFromWidget, isNoteInWidget } from '../utils/widgetUtils';
+import {theme} from '../utils/theme';
+import {Note, saveNote, getNote, deleteNote} from '../utils/noteUtils';
+import {shareNote, shareVoiceNote, shareDrawingNote} from '../utils/shareUtils';
+import {
+  addNoteToWidget,
+  removeNoteFromWidget,
+  isNoteInWidget,
+} from '../utils/widgetUtils';
 
 type RootStackParamList = {
   Splash: undefined;
@@ -68,10 +69,10 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
 
       const parsedText = data.ParsedResults[0]?.ParsedText || '';
       setNote(prev => ({ ...prev, content: parsedText }));
-      
+
       // Save the note with the OCR text
       handleSave();
-      
+
       Alert.alert('Text Converted', 'Your handwriting has been converted to text.');
     } catch (error) {
       console.error('OCR Error:', error);
@@ -96,7 +97,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
   useEffect(() => {
     const loadNote = async () => {
       const { noteId } = route.params || {};
-      
+
       if (noteId) {
         try {
           const loadedNote = await getNote(noteId);
@@ -105,7 +106,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
             if (loadedNote.audioPath) {
               setAudioPath(loadedNote.audioPath);
             }
-            
+
             // Check if note is in widget
             const noteInWidget = await isNoteInWidget(noteId);
             setIsInWidget(noteInWidget);
@@ -115,10 +116,10 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
           Alert.alert('Error', 'Failed to load note');
         }
       }
-      
+
       setIsLoading(false);
     };
-    
+
     loadNote();
   }, [route.params]);
 
@@ -127,15 +128,15 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
       Alert.alert('Error', 'Please enter a title for your note');
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const updatedNote = {
         ...note,
         updatedAt: Date.now(),
       };
-      
+
       await saveNote(updatedNote);
       setIsSaving(false);
       navigation.goBack();
@@ -152,8 +153,8 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
       'Are you sure you want to delete this note?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             if (note.id) {
@@ -167,8 +168,8 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
             } else {
               navigation.goBack();
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -193,7 +194,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
       Alert.alert('Save Required', 'Please save the note first before adding it to widget');
       return;
     }
-    
+
     try {
       if (isInWidget) {
         const removed = await removeNoteFromWidget(note.id);
@@ -246,12 +247,12 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
                 <Text style={{ fontSize: 16, color: theme.colors.darkGray }}>{note.content}</Text>
               </View>
             ) : null}
-            
+
             {/* Drawing canvas section - note the borderWidth to clearly show drawing boundaries */}
-            <View style={{ 
-              height: 400, 
+            <View style={{
+              height: 400,
               position: 'relative',
-              borderWidth: 1, 
+              borderWidth: 1,
               borderColor: theme.colors.lightGray,
               borderRadius: 8,
               overflow: 'hidden',
@@ -267,7 +268,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
                     pendingConvertToText.current = false;
                   }
                 }}
-                webStyle={`.m-signature-pad--footer {display: none;} .m-signature-pad { box-shadow: none; border: none; }`}
+                webStyle={'.m-signature-pad--footer {display: none;} .m-signature-pad { box-shadow: none; border: none; }'}
                 backgroundColor={theme.colors.white}
                 penColor={theme.colors.brown}
                 descriptionText=""
@@ -279,7 +280,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
                   height: '100%',
                 }}
               />
-              
+
               {/* Undo/Redo buttons */}
               <View style={{
                 position: 'absolute',
@@ -319,14 +320,14 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
                 </TouchableOpacity>
               </View>
             </View>
-            
+
             {/* Convert to Text button */}
             <TouchableOpacity
-              style={{ 
-                backgroundColor: theme.colors.primary, 
-                padding: 12, 
-                borderRadius: 8, 
-                alignItems: 'center', 
+              style={{
+                backgroundColor: theme.colors.primary,
+                padding: 12,
+                borderRadius: 8,
+                alignItems: 'center',
                 marginTop: 12,
                 marginBottom: 24,
               }}
@@ -386,7 +387,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
@@ -405,7 +406,7 @@ const NoteDetailScreen: React.FC<NoteDetailScreenProps> = ({ navigation, route }
           accessibilityLabel="Note title"
         />
         <TouchableOpacity style={styles.headerButton} onPress={handleWidgetToggle} accessibilityLabel="Toggle widget">
-          <Icon name={isInWidget ? "widgets" : "add-to-home-screen"} size={24} color={theme.colors.white} />
+          <Icon name={isInWidget ? 'widgets' : 'add-to-home-screen'} size={24} color={theme.colors.white} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerButton} onPress={handleShare} accessibilityLabel="Share note">
           <Icon name="share" size={24} color={theme.colors.white} />
