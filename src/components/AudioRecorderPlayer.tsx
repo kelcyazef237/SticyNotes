@@ -80,19 +80,21 @@ const AudioRecorderPlayerComponent: React.FC<Props> = ({ audioPath, onRecorded }
   useEffect(() => {
     if (audioPath) {
       // If audioPath is provided as a prop, add it to recordings if not already there
-      const recording = {
-        id: `imported-${Date.now()}`,
-        path: audioPath,
-        timestamp: Date.now(),
-      };
-
-      // Check if this recording already exists
-      const exists = recordings.some(r => r.path === audioPath);
-      if (!exists) {
-        setRecordings(prev => [...prev, recording]);
-      }
+      setRecordings(prev => {
+        // Check if this recording already exists
+        const exists = prev.some(r => r.path === audioPath);
+        if (!exists) {
+          const recording = {
+            id: `imported-${Date.now()}`,
+            path: audioPath,
+            timestamp: Date.now(),
+          };
+          return [...prev, recording];
+        }
+        return prev;
+      });
     }
-  }, [audioPath, recordings]);
+  }, [audioPath]);
 
   const checkPermission = async () => {
     setIsCheckingPermission(true);
